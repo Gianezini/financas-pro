@@ -1,0 +1,8 @@
+{
+  "name": "Pro Finance",
+  "description": "Um aplicativo completo para controle de finanças pessoais em português do Brasil. Acompanhe transações, crie metas, gerencie orçamentos e obtenha insights com o poder da IA. Inclui um chatbot, transcrição de áudio e conversão de texto em fala.",
+  "requestFramePermissions": [
+    "microphone",
+    "camera"
+  ]
+}
