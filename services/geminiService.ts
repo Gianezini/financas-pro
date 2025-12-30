@@ -162,18 +162,21 @@ export const estimateGoalCost = async (fullPrompt: string): Promise<{ breakdown:
     try {
         const response: GenerateContentResponse = await ai.models.generateContent({
             model: "gemini-3-flash-preview",
-            contents: `Você é um Assistente Especialista em Planejamento de Metas Financeiras e Pessoais. 
+            contents: `Você é um Assistente Especialista em Planejamento de Metas Financeiras e Pessoais.
+IMPORTANTE: Como você não tem acesso à internet em tempo real agora, baseie suas estimativas em dados históricos (conhecimento até final de 2024). 
+Sempre comece sua resposta com um breve aviso informando que os valores são estimativas baseadas em dados históricos e podem variar.
 Com base nas informações detalhadas da meta: "${fullPrompt}".
 
 Sua tarefa é:
-1. Pesquisar valores atuais e reais na internet (preços recentes e compatíveis com o mercado atual). Nunca utilize estimativas genéricas ou antigas.
-2. Estruturar a resposta obrigatoriamente com:
-   - 1. Resumo da meta.
+1. Estruturar a resposta obrigatoriamente com:
+   - 1. Resumo da meta e aviso sobre dados históricos.
    - 2. Detalhamento dos custos por categoria com explicações específicas baseadas no contexto (se for viagem, inclua hospedagem, comidas e passeios locais como um guia turístico).
-   - 3. Valor Total Estimado: R$ X,XX (Mantenha exatamente este termo no final).
+   - 3. Resumo de Gastos (Liste cada item e seu respectivo valor ao lado para conferência).
+   - 4. Valor Total Estimado: R$ X,XX (Mantenha exatamente este termo no final).
 
-Seja claro, organizado e didático.`,
-            config: { tools: [{ googleSearch: {} }] },
+Seja claro, organizado e didático. Garanta que a soma dos itens no 'Resumo de Gastos' bata exatamente com o 'Valor Total Estimado'.`,
+          //  config: { tools: [{ googleSearch: {} }] 
+            //},
         });
         // Fix: Access .text property directly.
         const responseText = String(response.text || "");
@@ -189,7 +192,7 @@ Seja claro, organizado e didático.`,
         };
     } catch (error) {
         console.error("Goal estimation error:", error);
-        return { breakdown: "Erro na estimativa da IA.", totalAmount: 0, sources: [] };
+        return { breakdown: "Erro na estimativa da IA. Verifique o consumo de cota da API", totalAmount: 0, sources: [] };
     }
 };
 
