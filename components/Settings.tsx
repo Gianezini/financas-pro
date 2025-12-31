@@ -156,7 +156,10 @@ const ProfileModal: React.FC<{ user: User, onClose: () => void }> = ({ user, onC
                     />
                 </div>
                 <div className="flex justify-end gap-3 pt-2">
-                    <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-600 border border-gray-300 rounded-md shadow-sm hover:bg-gray-200 dark:hover:bg-gray-500 font-semibold">
+                    <button 
+                        onClick={onClose} 
+                        className="px-4 py-2 text-sm font-bold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 border-none rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
+                    >
                         Cancelar
                     </button>
                     <button onClick={handleSave} className="inline-flex justify-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 font-semibold">
@@ -186,7 +189,6 @@ const Settings: React.FC<SettingsProps> = ({ theme, toggleTheme, onLogout, curre
     <div className="flex flex-col h-full bg-gray-50 dark:bg-dark-bg">
         <header className="sticky top-0 z-40 bg-white/95 dark:bg-dark-sidebar/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
             <div className="w-full px-4 py-3 sm:px-8">
-                {/* Título: Poppins semi-bold */}
                 <h1 className="text-lg sm:text-2xl font-semibold font-['Poppins'] text-gray-800 dark:text-white tracking-tight">Configurações</h1>
             </div>
         </header>
@@ -194,21 +196,23 @@ const Settings: React.FC<SettingsProps> = ({ theme, toggleTheme, onLogout, curre
             <div className="p-4 sm:p-6 w-full pb-24">
                 <div className="animate-in fade-in duration-300 space-y-3">
                     <div className="flex items-center gap-2 w-full">
-                        <Card className="flex-1 bg-accent border-none relative overflow-hidden text-left !p-3 sm:!p-4 rounded-xl sm:rounded-2xl h-20 sm:h-22 flex items-center">
+                        {/* Background do card alterado para branco no modo claro para contrastar com texto preto */}
+                        <Card className="flex-1 bg-white dark:bg-accent border border-gray-100 dark:border-none relative overflow-hidden text-left !p-3 sm:!p-4 rounded-xl sm:rounded-2xl h-20 sm:h-22 flex items-center shadow-sm dark:shadow-none">
                             <div className="flex items-center space-x-3 sm:space-x-4 relative z-10 w-full">
                                 <div className="relative flex-shrink-0">
                                     <img 
                                         src={currentUser.photo || `https://ui-avatars.com/api/?name=${(userName).replace(' ','+')}&background=random`} 
                                         alt="Foto" 
-                                        className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-white/30 shadow-xl" 
+                                        className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-accent/20 dark:border-white/30 shadow-xl" 
                                     />
-                                    <button onClick={() => setView('profile')} className="absolute -bottom-1 -right-1 p-0.5 bg-white text-accent rounded-full shadow-lg">
-                                        <PencilIcon className="w-2 h-2" />
+                                    <button onClick={() => setView('profile')} className="absolute -bottom-1 -right-1 p-0.5 bg-accent text-white rounded-full shadow-lg">
+                                        <PencilIcon className="w-2.5 h-2.5" />
                                     </button>
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <h2 className="text-sm sm:text-base font-semibold text-white truncate leading-tight">{userName}</h2>
-                                    <p className="text-[11px] sm:text-xs text-white/90 font-medium truncate mt-0.5">
+                                    {/* Nome e e-mail alterados para preto no modo claro */}
+                                    <h2 className="text-sm sm:text-base font-bold text-black dark:text-white truncate leading-tight">{userName}</h2>
+                                    <p className="text-[11px] sm:text-xs text-black/60 dark:text-white/90 font-medium truncate mt-0.5">
                                         {currentUser.email}
                                     </p>
                                 </div>
@@ -274,7 +278,7 @@ const ResetDataModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                     <button onClick={handleReset} className="w-full py-3 font-semibold text-white bg-red-600 rounded-xl hover:bg-red-700 transition-all text-sm uppercase tracking-widest shadow-lg shadow-red-600/20">
                         Zerar meus dados
                     </button>
-                    <button onClick={onClose} className="w-full py-3 font-semibold text-gray-400 dark:text-gray-500 hover:text-gray-600 transition-all text-[10px]">
+                    <button onClick={onClose} className="w-full py-3 font-bold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 border-none rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-all text-[10px]">
                         Cancelar
                     </button>
                 </div>
@@ -285,17 +289,19 @@ const ResetDataModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
 const CreditCardModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const { cardClosingDay, setCardClosingDay, showNotification } = useFinance();
-    const [day, setDay] = useState(cardClosingDay);
+    const [day, setDay] = useState<number | string>(cardClosingDay);
     const [isSaving, setIsSaving] = useState(false);
 
     const handleSave = async () => {
-        if (day >= 1 && day <= 28) {
+        const numericDay = typeof day === 'string' ? parseInt(day, 10) : day;
+        
+        if (!isNaN(numericDay) && numericDay >= 1 && numericDay <= 28) {
             setIsSaving(true);
-            await setCardClosingDay(day);
+            await setCardClosingDay(numericDay);
             setIsSaving(false);
             onClose();
         } else {
-            showNotification('Escolha um dia entre 1 e 28.', 'error');
+            showNotification('Escolha um dia válido entre 1 e 28.', 'error');
         }
     };
     return (
@@ -305,19 +311,29 @@ const CreditCardModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                     Defina o dia do fechamento para calcular automaticamente em qual fatura seus gastos mensais serão lançados.
                 </p>
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 font-semibold">Dia do fechamento</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 font-semibold">Dia do fechamento (entre 1 e 28)</label>
                     <input 
                         type="number" 
                         disabled={isSaving}
                         value={day} 
-                        onChange={e => setDay(parseInt(e.target.value) || 1)} 
-                        min="1" 
-                        max="28" 
+                        onChange={e => setDay(e.target.value)} 
                         className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-center font-semibold text-lg disabled:opacity-50" 
                     />
                 </div>
+                
+                <div>
+                    <p className="text-[10px] sm:text-xs font-semibold text-orange-600 dark:text-orange-400 italic leading-tight">
+                        O limite do dia 28 garante a consistência dos ciclos em todos os meses do ano, incluindo meses mais curtos como Fevereiro.
+                    </p>
+                </div>
+
                 <div className="flex justify-end gap-3 pt-2">
-                    <button type="button" disabled={isSaving} onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-600 border border-gray-300 rounded-md shadow-sm hover:bg-gray-200 dark:hover:bg-gray-500 font-semibold disabled:opacity-50">
+                    <button 
+                        type="button" 
+                        disabled={isSaving} 
+                        onClick={onClose} 
+                        className="px-4 py-2 text-sm font-bold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 border-none rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-all font-semibold disabled:opacity-50"
+                    >
                         Cancelar
                     </button>
                     <button type="submit" disabled={isSaving} className="inline-flex justify-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 font-semibold disabled:opacity-50 flex items-center gap-2">

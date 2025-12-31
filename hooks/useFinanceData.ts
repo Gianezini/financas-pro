@@ -1,5 +1,6 @@
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
+// Add React import to fix 'Cannot find namespace React' error for React.ReactNode
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { TransactionType, type Transaction, type Goal, type GoalTransaction, type AppNotification, type AppConfirmation, type User, type PaymentMethod, type Category } from '../types';
 import { INITIAL_CATEGORIES, INITIAL_PAYMENT_METHODS } from '../constants';
 import { supabase } from '../services/supabase';
@@ -69,6 +70,7 @@ export const useFinanceData = (currentUser: User | null) => {
                 name: c.name,
                 icon: c.icon,
                 color: c.color,
+                textColor: c.text_color,
                 customIcon: c.custom_icon
             });
 
@@ -77,6 +79,7 @@ export const useFinanceData = (currentUser: User | null) => {
                 name: p.name,
                 icon: p.icon,
                 color: p.color,
+                textColor: p.text_color,
                 customIcon: p.custom_icon
             });
 
@@ -100,7 +103,8 @@ export const useFinanceData = (currentUser: User | null) => {
                 const initialCats = INITIAL_CATEGORIES.map(c => ({ 
                     name: c.name, 
                     icon: c.icon, 
-                    color: c.color, 
+                    color: c.color,
+                    text_color: c.textColor,
                     user_id: currentUser.id 
                 }));
                 const { data: insertedCats } = await supabase.from('categories').insert(initialCats).select();
@@ -113,7 +117,8 @@ export const useFinanceData = (currentUser: User | null) => {
                 const initialPms = INITIAL_PAYMENT_METHODS.map(p => ({ 
                     name: p.name, 
                     icon: p.icon, 
-                    color: p.color, 
+                    color: p.color,
+                    text_color: p.textColor,
                     user_id: currentUser.id 
                 }));
                 const { data: insertedPms } = await supabase.from('payment_methods').insert(initialPms).select();
@@ -239,6 +244,15 @@ export const useFinanceData = (currentUser: User | null) => {
 
     const totalBalance = useMemo(() => {
         const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth();
+        const todayDay = now.getDate();
+
+        // Determina a PRÓXIMA data de fechamento baseada no dia de hoje
+        const nextClosingDate = todayDay < cardClosingDay 
+            ? new Date(year, month, cardClosingDay, 0, 0, 0)
+            : new Date(year, month + 1, cardClosingDay, 0, 0, 0);
+
         const transSum = transactions
             .filter(t => new Date(t.date) <= now)
             .reduce((acc, t) => {
@@ -246,8 +260,9 @@ export const useFinanceData = (currentUser: User | null) => {
                 if (t.type === TransactionType.Receita) return acc + t.amount;
                 if (t.type === TransactionType.Despesa) {
                     if (t.paymentMethod === 'Cartão de Crédito') {
-                        const isNextCycle = (tDate.getMonth() === now.getMonth() && tDate.getFullYear() === now.getFullYear() && tDate.getDate() >= cardClosingDay);
-                        if (isNextCycle) return acc;
+                        // Se a compra foi feita hoje ou depois do fechamento que abre o próximo ciclo, 
+                        // ela não é descontada do saldo "disponível" imediato.
+                        if (tDate >= nextClosingDate) return acc;
                         return acc - t.amount;
                     }
                     if (t.isCardBillPayment) return acc;
@@ -284,16 +299,11 @@ export const useFinanceData = (currentUser: User | null) => {
             
             let { error } = await supabase.from('goals').insert([dbPayload]);
             
-            // --- FALLBACK LÓGICA PARA COLUNA AUSENTE ---
             if (error && error.message?.includes('ai_sources')) {
-                console.warn("Coluna ai_sources ausente, tentando sem metadados de IA.");
                 delete dbPayload.ai_sources;
                 delete dbPayload.ai_breakdown;
                 const retry = await supabase.from('goals').insert([dbPayload]);
                 error = retry.error;
-                if (!error) {
-                    showNotification('Meta criada, mas sem detalhes da IA (Banco desatualizado).', 'info');
-                }
             }
 
             if (error) throw error;
@@ -316,7 +326,7 @@ export const useFinanceData = (currentUser: User | null) => {
                 target_amount: goal.targetAmount,
                 deadline: goal.deadline,
                 icon: goal.icon,
-                custom_icon: goal.customIcon
+                custom_icon: goal.customIcon || null
             }).eq('id', goal.id);
             
             if (error) throw error;
@@ -386,8 +396,8 @@ export const useFinanceData = (currentUser: User | null) => {
                 setIsLoading(false);
             }
         }, 
-        requestConfirmation: (title: string, message: string, onConfirm: () => void, isDestructive = false) => {
-            setConfirmation({ title, message, onConfirm, isDestructive });
+        requestConfirmation: (title: string, message: React.ReactNode, onConfirm: () => void, isDestructive = false, waitSeconds = 0) => {
+            setConfirmation({ title, message, onConfirm, isDestructive, waitSeconds });
         }, 
         closeConfirmation: () => setConfirmation(null),
         addTransaction, updateTransaction, openTransactionForm: (data?: Partial<Transaction>) => {
@@ -433,27 +443,37 @@ export const useFinanceData = (currentUser: User | null) => {
         },
         addCategory: async (cat: Omit<Category, 'id'>) => {
             if (!currentUser) return;
-            await supabase.from('categories').insert([{ name: cat.name, icon: cat.icon, color: cat.color, custom_icon: cat.customIcon, user_id: currentUser.id }]);
+            await supabase.from('categories').insert([{ name: cat.name, icon: cat.icon, color: cat.color, text_color: cat.textColor, custom_icon: cat.customIcon, user_id: currentUser.id }]);
             await fetchAllData();
         }, 
         updateCategory: async (cat: Category) => {
-            await supabase.from('categories').update({ name: cat.name, icon: cat.icon, color: cat.color, custom_icon: cat.customIcon }).eq('id', cat.id);
+            await supabase.from('categories').update({ name: cat.name, icon: cat.icon, color: cat.color, text_color: cat.textColor, custom_icon: cat.customIcon || null }).eq('id', cat.id);
             await fetchAllData();
         }, 
         deleteCategory: async (id: string) => {
+            if (!currentUser) return;
+            const fallback = categories.find(c => c.name.toLowerCase() === 'outro') || categories.find(c => c.id === 'others');
+            if (fallback) {
+                await supabase.from('transactions').update({ category_id: fallback.id }).eq('category_id', id);
+            }
             await supabase.from('categories').delete().eq('id', id);
             await fetchAllData();
         },
         addPaymentMethod: async (pm: Omit<PaymentMethod, 'id'>) => {
             if (!currentUser) return;
-            await supabase.from('payment_methods').insert([{ name: pm.name, icon: pm.icon, color: pm.color, custom_icon: pm.customIcon, user_id: currentUser.id }]);
+            await supabase.from('payment_methods').insert([{ name: pm.name, icon: pm.icon, color: pm.color, text_color: pm.textColor, custom_icon: pm.customIcon, user_id: currentUser.id }]);
             await fetchAllData();
         }, 
         updatePaymentMethod: async (pm: PaymentMethod) => {
-            await supabase.from('payment_methods').update({ name: pm.name, icon: pm.icon, color: pm.color, custom_icon: pm.customIcon }).eq('id', pm.id);
+            await supabase.from('payment_methods').update({ name: pm.name, icon: pm.icon, color: pm.color, text_color: pm.textColor, custom_icon: pm.customIcon || null }).eq('id', pm.id);
             await fetchAllData();
         }, 
         deletePaymentMethod: async (id: string) => {
+            if (!currentUser) return;
+            const targetPm = paymentMethods.find(p => p.id === id);
+            if (targetPm) {
+                await supabase.from('transactions').update({ payment_method: 'Outro' }).eq('payment_method', targetPm.name);
+            }
             await supabase.from('payment_methods').delete().eq('id', id);
             await fetchAllData();
         },

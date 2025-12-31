@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import type { Transaction } from '../types';
+import type { Transaction, Category } from '../types';
 import { TransactionType } from '../types';
 import { iconComponents, SearchIcon, XIcon } from '../constants';
 import { useFinance } from '../context/FinanceContext';
@@ -20,10 +20,34 @@ const formatDate = (dateString: string) => {
     return `${weekday} - ${dayMonthYear}`;
 };
 
+const getCategoryStyles = (cat: Category | undefined) => {
+    if (!cat) return { 
+        bg: 'bg-gray-100 dark:bg-gray-800', 
+        style: {},
+        iconStyle: { color: '#9ca3af' }
+    };
+
+    const isTransparent = cat.color === 'transparent';
+    const bgColor = isTransparent ? 'rgba(0, 0, 0, 0.2)' : cat.color;
+    const txtColor = isTransparent ? 'rgba(255, 255, 255, 0.8)' : (cat.textColor || '#ffffff');
+
+    return {
+        bg: '', // Usando apenas style para maior precisão na transparência
+        style: {
+            backgroundColor: bgColor,
+            color: txtColor,
+            border: 'none'
+        },
+        iconStyle: {
+            color: txtColor
+        }
+    };
+};
+
 const TransactionItem: React.FC<{ transaction: Transaction; onClick: () => void }> = ({ transaction, onClick }) => {
     const { categories } = useFinance();
-    const [showInfo, setShowInfo] = useState(false);
     const category = categories.find(c => c.id === transaction.categoryId);
+    const styles = getCategoryStyles(category);
     const Icon = category ? iconComponents[category.icon] : () => null;
     
     let amountColor = 'text-gray-500';
@@ -31,30 +55,25 @@ const TransactionItem: React.FC<{ transaction: Transaction; onClick: () => void 
     else if (transaction.type === TransactionType.Despesa) amountColor = 'text-red-500';
     else if (transaction.type === TransactionType.Investimento) amountColor = 'text-blue-500';
 
-    const isTransparent = category?.color === 'transparent';
-
-    const formattedPaymentMethod = transaction.paymentMethod 
-        ? transaction.paymentMethod.charAt(0).toUpperCase() + transaction.paymentMethod.slice(1).toLowerCase()
-        : '';
-
-    const baseColor = category?.color.replace('text-', '').replace('-500', '') || 'gray';
-
     const transactionTime = new Date(transaction.date).toLocaleTimeString('pt-BR', {
         hour: '2-digit',
         minute: '2-digit'
     });
 
+    const formattedPaymentMethod = transaction.paymentMethod 
+        ? transaction.paymentMethod.charAt(0).toUpperCase() + transaction.paymentMethod.slice(1).toLowerCase()
+        : '';
+
     return (
         <div onClick={onClick} className="flex items-center py-3 px-4 bg-white dark:bg-dark-sidebar rounded-xl mb-2 shadow-sm border border-transparent hover:border-accent/30 transition-all cursor-pointer w-full group relative">
-            <div className={`p-2.5 rounded-xl mr-4 transition-transform group-hover:scale-110 flex items-center justify-center flex-shrink-0 ${
-                isTransparent 
-                ? 'bg-gray-100 dark:bg-gray-800' 
-                : `${category?.color.replace('text-', 'bg-').replace('-500', '-100')} dark:${category?.color.replace('text-', 'bg-').replace('-500', '-900/40')}`
-            }`}>
+            <div 
+                className="p-2.5 rounded-xl mr-4 transition-transform group-hover:scale-110 flex items-center justify-center flex-shrink-0"
+                style={styles.style}
+            >
                 {category?.customIcon ? (
                     <img src={category.customIcon} className="w-5 h-5 object-contain" alt={category.name} />
                 ) : (
-                    <Icon className={`w-5 h-5 ${!isTransparent ? category?.color : ''}`} />
+                    <Icon className="w-5 h-5" style={styles.iconStyle} />
                 )}
             </div>
             
@@ -65,11 +84,10 @@ const TransactionItem: React.FC<{ transaction: Transaction; onClick: () => void 
                 
                 <div className="flex flex-wrap items-center gap-2">
                     {!transaction.isCardBillPayment && (
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold tracking-tight ${
-                            isTransparent 
-                            ? 'bg-gray-100 text-gray-500 dark:bg-gray-800' 
-                            : `bg-${baseColor}-50 text-${baseColor}-600 dark:bg-${baseColor}-900/30 dark:text-${baseColor}-400`
-                        }`}>
+                        <span 
+                            className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold tracking-tight shadow-sm"
+                            style={styles.style}
+                        >
                             {category?.name || 'Geral'}
                         </span>
                     )}
@@ -81,20 +99,24 @@ const TransactionItem: React.FC<{ transaction: Transaction; onClick: () => void 
                     )}
 
                     {transaction.isCardBillPayment && (
-                        <div className="relative flex items-center gap-1">
+                        <div 
+                            className="relative flex items-center gap-1 group/info"
+                            onClick={(e) => e.stopPropagation()} // Bloqueia abertura do modal ao clicar no ícone/tooltip
+                        >
                             <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold tracking-tight bg-orange-500 text-white shadow-sm shadow-orange-500/20">
                                 Fatura de Cartão
                             </span>
-                            <button 
-                                onClick={(e) => { e.stopPropagation(); setShowInfo(!showInfo); }}
-                                onMouseEnter={() => setShowInfo(true)}
-                                onMouseLeave={() => setShowInfo(false)}
-                                className="p-0.5 bg-gray-100 dark:bg-gray-800 rounded-full text-orange-500 hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                            <div className="text-orange-500 transition-transform group-hover/info:scale-110 cursor-help p-0.5">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-[18px] w-[18px]" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                                 </svg>
-                            </button>
+                            </div>
+                            {/* Tooltip Ajustado para abrir para baixo e com fonte corrigida */}
+                            <div className="absolute top-full left-0 mt-2 w-48 p-2.5 bg-gray-900 text-white text-[9px] rounded-xl opacity-0 group-hover/info:opacity-100 transition-all pointer-events-none z-[60] shadow-2xl border border-gray-700 leading-tight">
+                                <p className="text-orange-400 mb-1 uppercase tracking-tighter font-bold">Lançamento Informativo</p>
+                                <span className="font-normal text-white">Este registro apenas documenta o pagamento da fatura. O valor não é deduzido do saldo agora, pois as compras já foram contabilizadas individualmente quando ocorreram.</span>
+                                <div className="absolute bottom-full left-4 border-8 border-transparent border-b-gray-900"></div>
+                            </div>
                         </div>
                     )}
 
@@ -121,6 +143,13 @@ const TransactionItem: React.FC<{ transaction: Transaction; onClick: () => void 
     );
 }
 
+const normalizeText = (text: string) => {
+    return text
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+};
+
 type FutureFilterType = 'none' | 'nextMonth' | 'sixMonths' | 'all' | 'custom';
 
 const filterOptions: { key: FutureFilterType; label: string }[] = [
@@ -130,16 +159,6 @@ const filterOptions: { key: FutureFilterType; label: string }[] = [
     { key: 'all', label: 'Completo' },
     { key: 'custom', label: 'Personalizado' },
 ];
-
-/**
- * Normaliza o texto removendo acentos e convertendo para minúsculo
- */
-const normalizeText = (text: string) => {
-    return text
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .toLowerCase();
-};
 
 const Transactions: React.FC = () => {
   const { transactions, openTransactionForm, categories } = useFinance();
@@ -157,7 +176,6 @@ const Transactions: React.FC = () => {
       return localStorage.getItem('finpro_extrato_end') || new Date().toISOString().split('T')[0];
   });
 
-  // Novos estados para Pesquisa
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -174,7 +192,6 @@ const Transactions: React.FC = () => {
 
     let list: Transaction[] = [];
 
-    // Primeiro aplica o filtro de período
     switch (futureFilter) {
         case 'all': 
             list = transactions;
@@ -214,7 +231,6 @@ const Transactions: React.FC = () => {
             break;
     }
 
-    // Depois aplica a pesquisa se houver query (COM SUPORTE A ACENTOS)
     if (searchQuery.trim()) {
         const query = normalizeText(searchQuery);
         list = list.filter(t => {
@@ -260,11 +276,10 @@ const Transactions: React.FC = () => {
                     {filterOptions.map(({ key, label }) => (<option key={key} value={key}>{label}</option>))}
                 </select>
                 
-                {/* Botão da Lupa */}
                 <button 
                     onClick={() => {
                         setIsSearchOpen(!isSearchOpen);
-                        if (isSearchOpen) setSearchQuery(''); // Limpa ao fechar
+                        if (isSearchOpen) setSearchQuery(''); 
                     }}
                     className={`p-2.5 rounded-xl transition-all shadow-sm border ${
                         isSearchOpen 
@@ -277,7 +292,6 @@ const Transactions: React.FC = () => {
             </div>
           </div>
 
-          {/* Campo de Pesquisa Expandível */}
           {isSearchOpen && (
             <div className="mt-3 relative animate-in slide-in-from-top-2 duration-200">
                 <div className="relative group">

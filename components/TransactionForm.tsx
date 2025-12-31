@@ -116,16 +116,26 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSubmit, onClose, in
     
     const [billingCycleMessage, setBillingCycleMessage] = useState<{ text: string, color: string } | null>(null);
 
-    // --- LÓGICA DE CONCILIAÇÃO DE FATURA ---
+    // --- LÓGICA DE CONCILIAÇÃO DE FATURA ATUALIZADA ---
     const billAnalysis = useMemo(() => {
         if (!isCardBillPayment) return null;
 
         const paymentDate = new Date(date + 'T12:00:00');
-        const year = paymentDate.getFullYear();
-        const month = paymentDate.getMonth();
+        const paymentDay = paymentDate.getDate();
+        
+        let targetMonth = paymentDate.getMonth();
+        let targetYear = paymentDate.getFullYear();
 
-        const currentMonthClosing = new Date(year, month, cardClosingDay, 0, 0, 0);
-        const prevMonthClosing = new Date(year, month - 1, cardClosingDay, 0, 0, 0);
+        // NOVA LÓGICA: Se o pagamento for feito ANTES do dia de fechamento, 
+        // entende-se que é o pagamento do vencimento da fatura do mês anterior.
+        if (paymentDay < cardClosingDay) {
+            const tempDate = new Date(targetYear, targetMonth - 1, 1);
+            targetMonth = tempDate.getMonth();
+            targetYear = tempDate.getFullYear();
+        }
+
+        const currentMonthClosing = new Date(targetYear, targetMonth, cardClosingDay, 0, 0, 0);
+        const prevMonthClosing = new Date(targetYear, targetMonth - 1, cardClosingDay, 0, 0, 0);
 
         const cycleTransactions = transactions.filter(t => {
             const d = new Date(t.date);
@@ -143,6 +153,8 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSubmit, onClose, in
             sum, 
             diff, 
             count: cycleTransactions.length,
+            startDate: prevMonthClosing,
+            endDate: new Date(currentMonthClosing.getTime() - 1000), // Segundo anterior ao fechamento
             isMatch: Math.abs(diff) < 0.01,
             isHigher: diff > 0.01,
             isLower: diff < -0.01
@@ -152,7 +164,6 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSubmit, onClose, in
     const handleCreateAdjustment = async () => {
         if (!billAnalysis || !billAnalysis.isHigher) return;
 
-        // Busca categoria de taxas bancárias prioritariamente
         const bankFeesCat = categories.find(c => c.id === 'bank_fees' || c.name.toLowerCase().includes('taxas bancárias')) || 
                            categories.find(c => c.id === 'others' || c.name.toLowerCase().includes('outros')) || 
                            categories[0];
@@ -163,7 +174,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSubmit, onClose, in
             amount: billAnalysis.diff,
             categoryId: bankFeesCat.id,
             date: new Date().toISOString(), 
-            paymentMethod: paymentMethod, // Usa o método selecionado no modal
+            paymentMethod: paymentMethod, 
             isCardBillPayment: false
         };
 
@@ -342,8 +353,15 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSubmit, onClose, in
                                 </h4>
                             </div>
                             
+                            <div className="mb-3">
+                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter mb-1">Período de compras:</p>
+                                <p className="text-[11px] text-gray-600 dark:text-gray-300 font-semibold bg-white/40 dark:bg-black/10 py-1 px-2 rounded-lg border border-gray-200/50 dark:border-white/5">
+                                    {billAnalysis.startDate.toLocaleDateString('pt-BR')} até {billAnalysis.endDate.toLocaleDateString('pt-BR')}
+                                </p>
+                            </div>
+
                             <div className="flex justify-between text-xs mb-3">
-                                <span className="text-gray-500 dark:text-gray-400">Compras no Ciclo:</span>
+                                <span className="text-gray-500 dark:text-gray-400">Total somado no ciclo:</span>
                                 <span className="font-bold text-gray-800 dark:text-gray-200">{formatCurrency(billAnalysis.sum)}</span>
                             </div>
 
@@ -402,7 +420,10 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSubmit, onClose, in
                                                     {selectedCategory.customIcon ? (
                                                         <img src={selectedCategory.customIcon} className="w-full h-full object-contain" alt="" />
                                                     ) : (
-                                                        React.createElement(iconComponents[selectedCategory.icon] || iconComponents.DotsHorizontalIcon, { className: "w-full h-full" })
+                                                        React.createElement(iconComponents[selectedCategory.icon] || iconComponents.DotsHorizontalIcon, { 
+                                                            className: "w-full h-full",
+                                                            style: { color: selectedCategory.textColor }
+                                                        })
                                                     )}
                                                 </div>
                                             )}
@@ -446,7 +467,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSubmit, onClose, in
                                                                 {cat.customIcon ? (
                                                                     <img src={cat.customIcon} className="w-full h-full object-contain" alt="" />
                                                                 ) : (
-                                                                    <Icon className="w-full h-full" />
+                                                                    <Icon className="w-full h-full" style={{ color: cat.textColor }} />
                                                                 )}
                                                             </div>
                                                             <span className="text-xs font-semibold">{cat.name}</span>
@@ -486,7 +507,10 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSubmit, onClose, in
                                                     {selectedPaymentMethod.customIcon ? (
                                                         <img src={selectedPaymentMethod.customIcon} className="w-full h-full object-contain" alt="" />
                                                     ) : (
-                                                        React.createElement(iconComponents[selectedPaymentMethod.icon] || iconComponents.DotsHorizontalIcon, { className: `w-full h-full ${selectedPaymentMethod.color}` })
+                                                        React.createElement(iconComponents[selectedPaymentMethod.icon] || iconComponents.DotsHorizontalIcon, { 
+                                                            className: "w-full h-full",
+                                                            style: { color: selectedPaymentMethod.textColor }
+                                                        })
                                                     )}
                                                 </div>
                                             ) : <ListIcon className="w-4 h-4 text-gray-400" />}
@@ -530,7 +554,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSubmit, onClose, in
                                                                 {opt.customIcon ? (
                                                                     <img src={opt.customIcon} className="w-full h-full object-contain" alt="" />
                                                                 ) : (
-                                                                    <Icon className={`w-full h-full ${opt.color}`} />
+                                                                    <Icon className="w-full h-full" style={{ color: opt.textColor }} />
                                                                 )}
                                                             </div>
                                                             <span className="text-xs font-semibold">{opt.name}</span>

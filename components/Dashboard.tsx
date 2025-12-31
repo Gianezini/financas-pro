@@ -228,8 +228,8 @@ const Dashboard: React.FC = () => {
   const dashboardData = useMemo(() => {
     const now = new Date();
     const year = now.getFullYear();
-    // Fix: Using getMonth() instead of non-existent month() property on Date object
     const month = now.getMonth();
+    const todayDay = now.getDate();
     
     const currentMonthLabelLong = `${now.toLocaleString('pt-BR', { month: 'long' }).charAt(0).toUpperCase() + now.toLocaleString('pt-BR', { month: 'long' }).slice(1)}/${year}`;
 
@@ -242,20 +242,38 @@ const Dashboard: React.FC = () => {
     });
 
     const isCC = (t: Transaction) => t.type === TransactionType.Despesa && t.paymentMethod === 'Cartão de Crédito';
-    const currentMonthClosing = new Date(year, month, cardClosingDay, 0, 0, 0);
-    const prevMonthClosing = new Date(year, month - 1, cardClosingDay, 0, 0, 0);
+    
+    // --- LÓGICA DE CICLO DE CARTÃO MÓVEL ---
+    let currentCycleStart: Date;
+    let currentCycleEnd: Date;
+    let planningCycleStart: Date;
 
-    // Listas para detalhamento
+    if (todayDay < cardClosingDay) {
+        // Antes do fechamento do mês: estamos gastando na fatura que fecha HOJE/ESTE MÊS.
+        currentCycleStart = new Date(year, month - 1, cardClosingDay, 0, 0, 0);
+        currentCycleEnd = new Date(year, month, cardClosingDay, 0, 0, 0);
+        planningCycleStart = currentCycleEnd;
+    } else {
+        // Já fechou a deste mês: estamos gastando na fatura que fecha no mês QUE VEM.
+        currentCycleStart = new Date(year, month, cardClosingDay, 0, 0, 0);
+        currentCycleEnd = new Date(year, month + 1, cardClosingDay, 0, 0, 0);
+        planningCycleStart = currentCycleEnd;
+    }
+
     const listIncome = thisMonthTransactions.filter(t => t.type === TransactionType.Receita);
     const listExpenses = thisMonthTransactions.filter(t => t.type === TransactionType.Despesa && t.paymentMethod !== 'Cartão de Crédito' && !t.isCardBillPayment);
     const listInvestments = thisMonthTransactions.filter(t => t.type === TransactionType.Investimento);
-    const listCurrentCard = transactions.filter(t => isCC(t) && new Date(t.date) >= prevMonthClosing && new Date(t.date) < currentMonthClosing);
     
+    // Fatura que estamos gastando agora (Contém compras do ciclo que vence em breve)
+    const listCurrentCard = transactions.filter(t => isCC(t) && new Date(t.date) >= currentCycleStart && new Date(t.date) < currentCycleEnd);
+    
+    // Próxima fatura (Agendamentos futuros após o próximo fechamento)
+    const listPlanningCard = transactions.filter(t => isCC(t) && new Date(t.date) >= planningCycleStart);
+
     const allFutureTransactions = transactions.filter(t => new Date(t.date) > now);
     const listPendingIncome = allFutureTransactions.filter(t => t.type === TransactionType.Receita);
     const listPendingExpenses = allFutureTransactions.filter(t => t.type === TransactionType.Despesa && t.paymentMethod !== 'Cartão de Crédito' && !t.isCardBillPayment);
     const listPendingInvestments = allFutureTransactions.filter(t => t.type === TransactionType.Investimento);
-    const listPlanningCard = transactions.filter(t => isCC(t) && new Date(t.date) >= currentMonthClosing);
 
     const prevMonthEnd = new Date(year, month, 0);
     const prevTotalBalance = transactions
@@ -278,15 +296,19 @@ const Dashboard: React.FC = () => {
 
     const investmentVariation = prevTotalInvested !== 0 ? ((currentTotalInvested - prevTotalInvested) / Math.abs(prevTotalInvested)) * 100 : 0;
 
+    // Datas formatadas para as legendas
+    const currentEndReadable = new Date(currentCycleEnd.getTime() - 86400000).toLocaleDateString('pt-BR');
+    const planningStartReadable = planningCycleStart.toLocaleDateString('pt-BR');
+
     return { 
         currentMonthLabelLong,
         balanceVariation,
         investmentVariation,
         currentTotalInvested,
-        // Listas completas
+        currentEndReadable,
+        planningStartReadable,
         listIncome, listExpenses, listInvestments, listCurrentCard,
         listPendingIncome, listPendingExpenses, listPendingInvestments, listPlanningCard,
-        // Somatórios
         monthIncome: listIncome.reduce((sum, t) => sum + t.amount, 0),
         monthExpenses: listExpenses.reduce((sum, t) => sum + t.amount, 0),
         monthInvestments: listInvestments.reduce((sum, t) => t.isInvestmentWithdrawal ? sum - t.amount : sum + t.amount, 0),
@@ -366,7 +388,7 @@ const Dashboard: React.FC = () => {
                             amount={dashboardData.monthExpenses} 
                             color="bg-red-500" 
                             isVisible={isBalanceVisible} 
-                            description="Pagamentos sem cartão de crédito" 
+                            description="Exceto cartão de crédito" 
                             hasTransactions={dashboardData.listExpenses.length > 0}
                             onClick={() => setDetailedView({ title: 'Despesas do Mês', list: dashboardData.listExpenses, color: 'bg-red-500' })}
                         />
@@ -383,7 +405,7 @@ const Dashboard: React.FC = () => {
                             amount={dashboardData.currentCardBill} 
                             color="bg-orange-500" 
                             isVisible={isBalanceVisible} 
-                            description={`Gastos até o dia ${cardClosingDay - 1}`}
+                            description={`Gastos feitos até ${dashboardData.currentEndReadable}`}
                             hasTransactions={dashboardData.listCurrentCard.length > 0}
                             onClick={() => setDetailedView({ title: 'Fatura Atual', list: dashboardData.listCurrentCard, color: 'bg-orange-500' })}
                         />
@@ -406,6 +428,7 @@ const Dashboard: React.FC = () => {
                             amount={dashboardData.pendingExpenses} 
                             color="bg-red-500" 
                             isVisible={isBalanceVisible} 
+                            description="Exceto cartão de crédito"
                             hasTransactions={dashboardData.listPendingExpenses.length > 0}
                             onClick={() => setDetailedView({ title: 'Despesas Planejadas', list: dashboardData.listPendingExpenses, color: 'bg-red-500' })}
                         />
@@ -421,7 +444,7 @@ const Dashboard: React.FC = () => {
                             title="Próxima fatura do cartão" 
                             amount={dashboardData.planningCardBill} 
                             color="bg-purple-500" 
-                            description={`Gastos a partir do dia ${cardClosingDay}`} 
+                            description={`Inicia em ${dashboardData.planningStartReadable}`} 
                             isVisible={isBalanceVisible} 
                             hasTransactions={dashboardData.listPlanningCard.length > 0}
                             onClick={() => setDetailedView({ title: 'Próxima Fatura', list: dashboardData.listPlanningCard, color: 'bg-purple-500' })}

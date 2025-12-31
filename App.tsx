@@ -15,6 +15,7 @@ import Projection from './components/Projection';
 import Login from './components/Login';
 import TransactionForm, { RecurringUpdateModal } from './components/TransactionForm';
 import GoalForm from './components/GoalForm';
+import CameraModal from './components/CameraModal';
 import { extractReceiptInfo } from './services/geminiService';
 import { supabase } from './services/supabase';
 
@@ -29,29 +30,53 @@ const NotificationToast = ({ message, type }: { message: string, type: 'success'
     );
 };
 
-const ConfirmationModal = ({ title, message, onConfirm, onCancel, isDestructive = false }: { title: string, message: string, onConfirm: () => void, onCancel: () => void, isDestructive?: boolean }) => (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[140] flex justify-center items-start pt-24 p-4 animate-in fade-in duration-200 overflow-y-auto">
-        <div className="bg-white dark:bg-gray-800 rounded-[2rem] shadow-2xl w-full max-w-md p-8 sm:p-10 text-center animate-in zoom-in-95 duration-200">
-            {isDestructive && (
-                <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <TrashIcon className="w-8 h-8" />
+const ConfirmationModal = ({ title, message, onConfirm, onCancel, isDestructive = false, waitSeconds = 0 }: { title: string, message: React.ReactNode, onConfirm: () => void, onCancel: () => void, isDestructive?: boolean, waitSeconds?: number }) => {
+    const [timeLeft, setTimeLeft] = useState(waitSeconds);
+
+    useEffect(() => {
+        if (timeLeft <= 0) return;
+        const timer = setInterval(() => {
+            setTimeLeft(prev => prev - 1);
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [timeLeft]);
+
+    return (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[140] flex justify-center items-start pt-24 p-4 animate-in fade-in duration-200 overflow-y-auto">
+            <div className="bg-white dark:bg-gray-800 rounded-[2rem] shadow-2xl w-full max-w-md p-8 sm:p-10 text-center animate-in zoom-in-95 duration-200">
+                {isDestructive && (
+                    <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <TrashIcon className="w-8 h-8" />
+                    </div>
+                )}
+                <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 dark:text-white tracking-tight mb-3">{title}</h2>
+                <div className="text-sm text-gray-500 dark:text-gray-400 font-medium leading-relaxed mb-8">{message}</div>
+                <div className="flex flex-col gap-3">
+                    <button 
+                        onClick={onConfirm} 
+                        disabled={timeLeft > 0}
+                        className={`w-full py-4 font-semibold text-white rounded-xl uppercase tracking-widest text-xs shadow-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${isDestructive ? 'bg-red-600 hover:bg-red-700 shadow-red-600/20' : 'bg-accent hover:bg-accent-light shadow-accent/20'}`}
+                    >
+                        {timeLeft > 0 ? `Aguarde (${timeLeft}s)` : 'Confirmar'}
+                    </button>
+                    <button 
+                        onClick={onCancel} 
+                        className="w-full py-4 font-bold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 border-none rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-all uppercase tracking-widest text-[10px]"
+                    >
+                        Cancelar
+                    </button>
                 </div>
-            )}
-            <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 dark:text-white tracking-tight mb-3">{title}</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium leading-relaxed mb-8">{message}</p>
-            <div className="flex flex-col gap-3">
-                <button onClick={onConfirm} className={`w-full py-4 font-semibold text-white rounded-xl uppercase tracking-widest text-xs shadow-lg transition-all active:scale-95 ${isDestructive ? 'bg-red-600 hover:bg-red-700 shadow-red-600/20' : 'bg-accent hover:bg-accent-light shadow-accent/20'}`}>Confirmar</button>
-                <button onClick={onCancel} className="w-full py-4 font-semibold text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-all uppercase tracking-widest text-[10px]">Cancelar</button>
             </div>
         </div>
-    </div>
-);
+    );
+};
 
 const App: React.FC = () => {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [isAppLoading, setIsAppLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState<Page>(Page.Dashboard);
     const [isChatbotOpen, setIsChatbotOpen] = useState(false);
+    const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
     
     const financeData = useFinanceData(currentUser);
     
@@ -61,11 +86,9 @@ const App: React.FC = () => {
     const [isFabMenuOpen, setIsFabMenuOpen] = useState(false);
     const [isProcessingReceipt, setIsProcessingReceipt] = useState(false);
 
-    // Estado para controle de edição/exclusão recorrente
     const [recurringAction, setRecurringAction] = useState<{ type: 'edit' | 'delete', transaction: Transaction, data?: any } | null>(null);
     
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const cameraInputRef = useRef<HTMLInputElement>(null);
 
     const [theme, setTheme] = useState(() => {
         if (typeof window !== 'undefined' && window.localStorage) {
@@ -144,30 +167,32 @@ const App: React.FC = () => {
         setCurrentPage(Page.Dashboard);
     };
 
-    const processImageFile = async (file: File) => {
+    const processBase64Image = async (base64String: string, mimeType: string) => {
       setIsProcessingReceipt(true);
       try {
-          const reader = new FileReader();
-          reader.onloadend = async () => {
-              const base64String = (reader.result as string).split(',')[1];
-              const extractedData = await extractReceiptInfo(base64String, file.type, financeData.categories);
-              if (extractedData) {
-                  financeData.openTransactionForm({ ...extractedData, type: TransactionType.Despesa });
-              } else {
-                  financeData.showNotification('Não foi possível extrair dados.', 'error');
-              }
-              setIsProcessingReceipt(false);
-          };
-          reader.readAsDataURL(file);
+          const extractedData = await extractReceiptInfo(base64String, mimeType, financeData.categories);
+          if (extractedData) {
+              financeData.openTransactionForm({ ...extractedData, type: TransactionType.Despesa });
+          } else {
+              financeData.showNotification('Não foi possível extrair dados.', 'error');
+          }
       } catch (error) {
           financeData.showNotification('Erro ao processar imagem.', 'error');
+      } finally {
           setIsProcessingReceipt(false);
       }
     };
 
     const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
-      if (file) processImageFile(file);
+      if (file) {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+              const base64 = (reader.result as string).split(',')[1];
+              processBase64Image(base64, file.type);
+          };
+          reader.readAsDataURL(file);
+      }
       if (event.target) event.target.value = '';
     };
 
@@ -252,6 +277,17 @@ const App: React.FC = () => {
                             <div className="w-8 h-8 border-3 border-accent/30 border-t-accent rounded-full animate-spin"></div>
                         </div>
                     )}
+                    {isProcessingReceipt && (
+                        <div className="absolute inset-0 bg-black/60 z-[300] flex items-center justify-center backdrop-blur-md">
+                            <div className="flex flex-col items-center gap-6">
+                                <div className="w-16 h-16 border-4 border-white/20 border-t-accent rounded-full animate-spin"></div>
+                                <div className="text-center">
+                                    <h2 className="text-white text-xl font-black uppercase tracking-widest mb-2 animate-pulse">Lendo Recibo...</h2>
+                                    <p className="text-white/60 text-xs font-medium uppercase tracking-tighter">A IA está processando os dados financeiros</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                     <div className="flex-1 overflow-y-auto pb-24 md:pb-0">{renderPage()}</div>
                 </main>
 
@@ -264,9 +300,11 @@ const App: React.FC = () => {
                 </nav>
 
                 {isChatbotOpen && <Chatbot onClose={() => setIsChatbotOpen(false)} messages={chatMessages} setMessages={setChatMessages} financialData={financeData} />}
+                {isCameraModalOpen && <CameraModal onCapture={(base64) => processBase64Image(base64, 'image/jpeg')} onClose={() => setIsCameraModalOpen(false)} />}
+                
                 {financeData.isTransactionFormOpen && <TransactionForm onSubmit={onTransactionSubmit} onClose={financeData.closeTransactionForm} initialData={financeData.transactionInitialData} onDeleteRequest={onTransactionDeleteRequest} />}
                 {financeData.isGoalFormOpen && <GoalForm onSubmit={onGoalSubmit} onClose={financeData.closeGoalForm} initialData={financeData.goalToEdit} />}
-                {financeData.confirmation && <ConfirmationModal title={financeData.confirmation.title} message={financeData.confirmation.message} isDestructive={financeData.confirmation.isDestructive} onConfirm={() => { financeData.confirmation?.onConfirm(); financeData.closeConfirmation(); }} onCancel={financeData.closeConfirmation} />}
+                {financeData.confirmation && <ConfirmationModal title={financeData.confirmation.title} message={financeData.confirmation.message} isDestructive={financeData.confirmation.isDestructive} waitSeconds={financeData.confirmation.waitSeconds} onConfirm={() => { financeData.confirmation?.onConfirm(); financeData.closeConfirmation(); }} onCancel={financeData.closeConfirmation} />}
                 {financeData.transactionToDelete && <ConfirmationModal title="Excluir Transação" message="Tem certeza?" isDestructive onConfirm={() => financeData.confirmDeleteTransaction(undefined, false)} onCancel={financeData.cancelDeleteTransaction} />}
 
                 {recurringAction && (
@@ -293,13 +331,13 @@ const App: React.FC = () => {
                     />
                 )}
 
-                {!financeData.isTransactionFormOpen && !financeData.isGoalFormOpen && !isChatbotOpen && (
+                {!financeData.isTransactionFormOpen && !financeData.isGoalFormOpen && !isChatbotOpen && !isCameraModalOpen && (
                     <div className="fixed bottom-20 right-6 md:bottom-10 md:right-10 flex flex-col items-center gap-4 z-50">
                         {isFabMenuOpen && (
                             <div className="flex flex-col-reverse items-center gap-4 animate-in slide-in-from-bottom-4 fade-in duration-200">
                                 <button onClick={() => { financeData.openTransactionForm(); setIsFabMenuOpen(false); }} title="Lançamento Manual" className="bg-blue-600 text-white p-3.5 rounded-full shadow-xl hover:bg-blue-700 transition-transform transform hover:scale-110 active:scale-95"><PencilIcon className="h-6 w-6" /></button>
-                                <button onClick={() => { cameraInputRef.current?.click(); setIsFabMenuOpen(false); }} title="Tirar Foto" className="bg-emerald-600 text-white p-3.5 rounded-full shadow-xl hover:bg-emerald-700 transition-transform transform hover:scale-110 active:scale-95" disabled={isProcessingReceipt}>{isProcessingReceipt ? <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <CameraIcon className="w-6 h-6" />}</button>
-                                <button onClick={() => { fileInputRef.current?.click(); setIsFabMenuOpen(false); }} title="Importar Galeria" className="bg-sky-500 text-white p-3.5 rounded-full shadow-xl hover:bg-sky-600 transition-transform transform hover:scale-110 active:scale-95" disabled={isProcessingReceipt}>{isProcessingReceipt ? <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <PhotoIcon className="w-6 h-6" />}</button>
+                                <button onClick={() => { setIsCameraModalOpen(true); setIsFabMenuOpen(false); }} title="Tirar Foto" className="bg-emerald-600 text-white p-3.5 rounded-full shadow-xl hover:bg-emerald-700 transition-transform transform hover:scale-110 active:scale-95" disabled={isProcessingReceipt}><CameraIcon className="w-6 h-6" /></button>
+                                <button onClick={() => { fileInputRef.current?.click(); setIsFabMenuOpen(false); }} title="Importar Galeria" className="bg-sky-500 text-white p-3.5 rounded-full shadow-xl hover:bg-sky-600 transition-transform transform hover:scale-110 active:scale-95" disabled={isProcessingReceipt}><PhotoIcon className="w-6 h-6" /></button>
                                 <button onClick={() => { setIsChatbotOpen(true); setIsFabMenuOpen(false); }} title="Assistente IA" className="bg-purple-600 text-white p-3.5 rounded-full shadow-xl hover:bg-purple-700 transition-transform transform hover:scale-110 active:scale-95"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg></button>
                             </div>
                         )}
@@ -307,7 +345,6 @@ const App: React.FC = () => {
                     </div>
                 )}
                 <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileSelect} className="hidden" />
-                <input type="file" accept="image/*" capture="environment" ref={cameraInputRef} onChange={handleFileSelect} className="hidden" />
             </div>
         </FinanceContext.Provider>
     );

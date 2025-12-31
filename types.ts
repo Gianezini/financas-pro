@@ -22,12 +22,9 @@ export type User = {
   name: string;
   email: string;
   photo: string | null;
-  password?: string; // Usado apenas para o mock de login no localStorage
+  password?: string;
 };
 
-/**
- * Representa os nomes dos ícones disponíveis no sistema.
- */
 export type IconName = 
   | 'HomeIcon' | 'UtensilsIcon' | 'CarIcon' | 'CalendarDaysIcon' | 'TrendingUpIcon'
   | 'ShoppingBagIcon' | 'HeartIcon' | 'TicketIcon' | 'AcademicCapIcon' | 'BriefcaseIcon'
@@ -43,16 +40,18 @@ export type Category = {
   id: string;
   name: string;
   icon: IconName;
-  color: string;
-  customIcon?: string; // Base64 PNG string
+  color: string; // Armazena Hex ou 'transparent'
+  textColor?: string; // Armazena Hex
+  customIcon?: string;
 };
 
 export type PaymentMethod = {
   id: string;
   name: string;
   icon: IconName;
-  color: string;
-  customIcon?: string; // Base64 PNG string
+  color: string; // Armazena Hex ou 'transparent'
+  textColor?: string; // Armazena Hex
+  customIcon?: string;
 };
 
 export type Transaction = {
@@ -61,11 +60,11 @@ export type Transaction = {
   description: string;
   amount: number;
   categoryId: string;
-  date: string; // ISO String
-  paymentMethod: string; // Mantido como string (nome) para compatibilidade, ou ID se preferir refatorar tudo
+  date: string;
+  paymentMethod: string;
   isRecurring?: boolean;
   frequency?: 'diaria' | 'semanal' | 'mensal';
-  endDate?: string; // ISO String
+  endDate?: string;
   recurringId?: string;
   isCardBillPayment?: boolean;
   isInvestmentWithdrawal?: boolean;
@@ -76,10 +75,10 @@ export type Goal = {
   name: string;
   targetAmount: number;
   currentAmount: number;
-  deadline: string; // ISO String
-  creationDate: string; // ISO String
-  icon: string; // Emoji
-  customIcon?: string; // Base64 PNG string
+  deadline: string;
+  creationDate: string;
+  icon: string;
+  customIcon?: string;
   isAiGenerated?: boolean;
   aiBreakdown?: string;
   aiSources?: any[];
@@ -89,7 +88,7 @@ export type GoalTransaction = {
   id: string;
   goalId: string;
   amount: number; 
-  date: string; // ISO String
+  date: string;
   description: string;
 };
 
@@ -110,7 +109,8 @@ export type AppNotification = {
 
 export type AppConfirmation = {
     title: string;
-    message: string;
+    message: React.ReactNode;
     onConfirm: () => void;
     isDestructive?: boolean;
+    waitSeconds?: number;
 };

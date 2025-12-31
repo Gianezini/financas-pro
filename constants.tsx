@@ -3,21 +3,18 @@ import type { Category, PaymentMethod, IconName } from './types';
 import { Page } from './types';
 import React from 'react';
 
-// Wrapper para Emojis (Categorias)
-const EmojiIcon = ({ char, className = "" }: { char: string, className?: string }) => (
-  <span className={`inline-flex items-center justify-center leading-none select-none ${className}`} style={{ fontSize: '1.25rem' }}>
+const EmojiIcon = ({ char, className = "", style = {} }: { char: string, className?: string, style?: React.CSSProperties }) => (
+  <span className={`inline-flex items-center justify-center leading-none select-none ${className}`} style={{ fontSize: '1.25rem', ...style }}>
     {char}
   </span>
 );
 
-// Componente Base para SVGs (Interface de Sistema)
-const SvgIcon = ({ children, className = 'w-5 h-5' }: { children: React.ReactNode, className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+const SvgIcon = ({ children, className = 'w-5 h-5', style = {} }: { children: React.ReactNode, className?: string, style?: React.CSSProperties }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className} style={style}>
     {children}
   </svg>
 );
 
-// --- ÍCONES DE SISTEMA (SVG) ---
 export const HomeIcon = (p: any) => <SvgIcon {...p}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-1.125 1.125-1.125V9.75M8.25 21h8.25" /></SvgIcon>;
 export const ListIcon = (p: any) => <SvgIcon {...p}><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" /></SvgIcon>;
 export const SearchIcon = (p: any) => <SvgIcon {...p}><path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></SvgIcon>;
@@ -39,7 +36,6 @@ export const PaletteIcon = (p: any) => <SvgIcon {...p}><path strokeLinecap="roun
 export const CashIcon = (p: any) => <SvgIcon {...p}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></SvgIcon>;
 export const SparklesIcon = (p: any) => <SvgIcon {...p}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09-3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.456-2.455L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456-2.455L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423z" /></SvgIcon>;
 
-// --- ÍCONE DE ESTRELA (PARA IA) ---
 export const StarIcon = (p: any) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={p.className || "w-5 h-5"}>
     <path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" clipRule="evenodd" />
@@ -47,32 +43,24 @@ export const StarIcon = (p: any) => (
 );
 
 export const CalendarDaysIcon = (p: any) => <SvgIcon {...p}><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" /></SvgIcon>;
-
-// --- ÍCONES ADICIONAIS DE SISTEMA (SVG) ---
 export const SunIcon = (p: any) => <SvgIcon {...p}><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" /></SvgIcon>;
 export const MoonIcon = (p: any) => <SvgIcon {...p}><path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" /></SvgIcon>;
 export const MicrophoneIcon = (p: any) => <SvgIcon {...p}><path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" /></SvgIcon>;
 export const StopIcon = (p: any) => <SvgIcon {...p}><path strokeLinecap="round" strokeLinejoin="round" d="M5.25 7.5A2.25 2.25 0 0 1 7.5 5.25h9a2.25 2.25 0 0 1 2.25 2.25v9a2.25 2.25 0 0 1-2.25 2.25h-9a2.25 2.25 0 0 1-2.25-2.25v-9Z" /></SvgIcon>;
 export const CheckIcon = (p: any) => <SvgIcon {...p}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></SvgIcon>;
-export const PhotoIcon = (p: any) => (
-  <SvgIcon {...p}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
-  </SvgIcon>
-);
+export const PhotoIcon = (p: any) => <SvgIcon {...p}><path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" /></SvgIcon>;
+
+export const LockIcon = (p: any) => <SvgIcon {...p}><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" /></SvgIcon>;
 
 export const ReceiptPercentIcon = (p: any) => <EmojiIcon char="💵" {...p} />;
-
 export const BanknoteIcon = (p: any) => (
   <SvgIcon {...p}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75-3h15M2.25 6H21.75V18H2.25V6ZM12 15.75a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
   </SvgIcon>
 );
-
-// FIX: Exporting WalletIcon component individually to satisfy imports in other files like Settings.tsx
 export const WalletIcon = (p: any) => <EmojiIcon char="🛠️" {...p} />;
 
-// --- ÍCONES DE CATEGORIA (EMOTES) ---
-export const iconComponents: { [key in IconName]: React.FC<{className?: string}> } = {
+export const iconComponents: { [key in IconName]: React.FC<{className?: string, style?: React.CSSProperties}> } = {
   HomeIcon: (p) => <EmojiIcon char="🏠" {...p} />,
   UtensilsIcon: (p) => <EmojiIcon char="🍽️" {...p} />,
   CarIcon: (p) => <EmojiIcon char="⛽" {...p} />, 
@@ -97,8 +85,6 @@ export const iconComponents: { [key in IconName]: React.FC<{className?: string}>
   BookOpenIcon: (p) => <EmojiIcon char="📚" {...p} />,
   DesktopComputerIcon: (p) => <EmojiIcon char="💻" {...p} />,
   WalletIcon,
-  
-  // Mapeamentos de Sistema (para uso interno)
   SunIcon, MoonIcon, UserIcon, PaletteIcon, CashIcon, TrashIcon, ArrowLeftIcon, PencilIcon, PlusIcon, XIcon, SparklesIcon, CameraIcon, 
   MicrophoneIcon: (p) => <MicrophoneIcon {...p} />, 
   StopIcon: (p) => <StopIcon {...p} />, 
@@ -107,8 +93,6 @@ export const iconComponents: { [key in IconName]: React.FC<{className?: string}>
   SpeakerXMarkIcon: (p) => <EmojiIcon char="🔇" {...p} />, 
   EyeIcon, EyeOffIcon, SettingsIcon, ListIcon, ChartIcon, FlagIcon, SearchIcon
 };
-
-// --- FIX: Missing Exports for NAV_ITEMS, INITIAL_CATEGORIES and INITIAL_PAYMENT_METHODS ---
 
 export const NAV_ITEMS = [
   { page: Page.Dashboard, label: 'Dashboard', icon: HomeIcon },
@@ -120,23 +104,23 @@ export const NAV_ITEMS = [
 ];
 
 export const INITIAL_CATEGORIES: Category[] = [
-  { id: 'salary', name: 'Salário', icon: 'BriefcaseIcon', color: 'text-green-500' },
-  { id: 'food', name: 'Alimentação', icon: 'UtensilsIcon', color: 'text-orange-500' },
-  { id: 'housing', name: 'Moradia', icon: 'HomeIcon', color: 'text-blue-500' },
-  { id: 'transport', name: 'Transporte', icon: 'BusIcon', color: 'text-indigo-500' },
-  { id: 'investments', name: 'Investimentos', icon: 'TrendingUpIcon', color: 'text-sky-500' },
-  { id: 'card_bill', name: 'Fatura do Cartão', icon: 'ReceiptPercentIcon', color: 'text-orange-500' },
-  { id: 'bank_fees', name: 'Taxas bancárias', icon: 'ReceiptPercentIcon', color: 'text-red-400' },
-  { id: 'leisure', name: 'Lazer', icon: 'TicketIcon', color: 'text-purple-500' },
-  { id: 'health', name: 'Saúde', icon: 'HeartIcon', color: 'text-red-500' },
-  { id: 'others', name: 'Outros', icon: 'DotsHorizontalIcon', color: 'text-gray-500' },
+  { id: 'salary', name: 'Salário', icon: 'BriefcaseIcon', color: '#22c55e', textColor: '#ffffff' },
+  { id: 'food', name: 'Alimentação', icon: 'UtensilsIcon', color: '#f97316', textColor: '#ffffff' },
+  { id: 'housing', name: 'Moradia', icon: 'HomeIcon', color: '#3b82f6', textColor: '#ffffff' },
+  { id: 'transport', name: 'Transporte', icon: 'BusIcon', color: '#6366f1', textColor: '#ffffff' },
+  { id: 'investments', name: 'Investimentos', icon: 'TrendingUpIcon', color: '#0ea5e9', textColor: '#ffffff' },
+  { id: 'card_bill', name: 'Fatura do Cartão', icon: 'ReceiptPercentIcon', color: '#f97316', textColor: '#ffffff' },
+  { id: 'bank_fees', name: 'Taxas bancárias', icon: 'ReceiptPercentIcon', color: '#f87171', textColor: '#ffffff' },
+  { id: 'leisure', name: 'Lazer', icon: 'TicketIcon', color: '#a855f7', textColor: '#ffffff' },
+  { id: 'health', name: 'Saúde', icon: 'HeartIcon', color: '#ef4444', textColor: '#ffffff' },
+  { id: 'others', name: 'Outro', icon: 'DotsHorizontalIcon', color: '#6b7280', textColor: '#ffffff' },
 ];
 
 export const INITIAL_PAYMENT_METHODS: PaymentMethod[] = [
-  { id: 'pm_pix', name: 'PIX', icon: 'BoltIcon', color: 'text-blue-500' },
-  { id: 'pm_cash', name: 'Dinheiro', icon: 'CashIcon', color: 'text-green-500' },
-  { id: 'pm_card_credit', name: 'Cartão de Crédito', icon: 'TicketIcon', color: 'text-orange-500' },
-  { id: 'pm_card_debit', name: 'Cartão de Débito', icon: 'TicketIcon', color: 'text-indigo-500' },
-  { id: 'pm_boleto', name: 'Boleto', icon: 'ReceiptPercentIcon', color: 'text-yellow-600' },
-  { id: 'pm_other', name: 'Outro', icon: 'DotsHorizontalIcon', color: 'text-gray-400' },
+  { id: 'pm_pix', name: 'PIX', icon: 'BoltIcon', color: '#3b82f6', textColor: '#ffffff' },
+  { id: 'pm_cash', name: 'Dinheiro', icon: 'CashIcon', color: '#22c55e', textColor: '#ffffff' },
+  { id: 'pm_card_credit', name: 'Cartão de Crédito', icon: 'TicketIcon', color: '#f97316', textColor: '#ffffff' },
+  { id: 'pm_card_debit', name: 'Cartão de Débito', icon: 'TicketIcon', color: '#6366f1', textColor: '#ffffff' },
+  { id: 'pm_boleto', name: 'Boleto', icon: 'ReceiptPercentIcon', color: '#ca8a04', textColor: '#ffffff' },
+  { id: 'pm_other', name: 'Outro', icon: 'DotsHorizontalIcon', color: '#9ca3af', textColor: '#ffffff' },
 ];
